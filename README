@@ -36,7 +36,7 @@ You can get all the information about a record through 'Read'.
 You can update the records facets (or it's score) with update / create
 You can remove a record from the system with Delete. (that's a hard remove... no going back!)
 
-== Query allows you to make a query on the database.
+==Query allows you to make a query on the database.
 :search => {
   :and/or =>
     {
