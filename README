@@ -36,13 +36,16 @@ You can get all the information about a record through 'Read'.
 You can update the records facets (or it's score) with update / create
 You can remove a record from the system with Delete. (that's a hard remove... no going back!)
 
-==Query allows you to make a query on the database.
+Create/Update have the same API: (Example)
+:id    => "recipe_45"
+:keys  => ["chicken", "soup", "nuts", "ingredients[5]", "instructions[10]"]
+:score => {:popularity => 0.8, :quality => 0.5}
+
+
+Query allows you to make a query on the database.
 :search => {
   :and/or =>
-    {
-      :facet_name => [ possible_keys ],
-      :facet_name => [ possible_keys ]
-    }
+    ['chicken', 'instructions[10]', 'instructions[11]','instructions[12]']
 }
 :score  => ... (TBD, for now it is always default), at times
   {
