@@ -1,0 +1,19 @@
+A gem and backend solution for searching moderate amounts of data
+with faceting.
+
+* consistent
+* simple for testing & production
+
+Call Stack:
+
+Model
+
+HasXedni
+
+XedniGem
+
+(if in local mode )         ( If in remote mode)
+XedniInterface              XedniServer
+                            XedniInterface
+
+Redis
