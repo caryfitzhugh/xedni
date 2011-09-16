@@ -17,3 +17,34 @@ XedniInterface              XedniServer
                             XedniInterface
 
 Redis
+
+
+Check out:
+https://github.com/djanowski/redis-scripted/blob/master/lib/redis/scripted.rb
+
+
+Xedni lets you do CRUD actions on the records:
+Xedni does not supply GUIDs - you must do so. or some unique key (like table_name_#{id})
+
+Query
+Create  (or update works as well).
+Read
+Update
+Delete
+
+You can get all the information about a record through 'Read'.
+You can update the records facets (or it's score) with update / create
+You can remove a record from the system with Delete. (that's a hard remove... no going back!)
+
+== Query allows you to make a query on the database.
+:search => {
+  :and/or =>
+    {
+      :facet_name => [ possible_keys ],
+      :facet_name => [ possible_keys ]
+    }
+}
+:score  => ... (TBD, for now it is always default), at times
+  {
+    :score_key => custom_weighting
+  }
