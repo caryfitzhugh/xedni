@@ -37,17 +37,28 @@ You can update the records facets (or it's score) with update / create
 You can remove a record from the system with Delete. (that's a hard remove... no going back!)
 
 Create/Update have the same API: (Example)
-:id    => "recipe_45"
-:keys  => ["chicken", "soup", "nuts", "ingredients[5]", "instructions[10]"]
+:id    => "45_recipe" (just .to_i in rails :))
+:keys  => ["chicken", "soup", "nuts", {:ingredients=>[5]}, {instructions=>[10]}]
 :score => {:popularity => 0.8, :quality => 0.5}
 
 
 Query allows you to make a query on the database.
 :search => {
   :and/or =>
-    ['chicken', 'instructions[10]', 'instructions[11]','instructions[12]']
-}
+    ['chicken', {:instructions=>[10,11,12]}]
+},
+:facets => { :chicken, :instructions, :ingredients, :publisher, :heart_healthy }
+
 :score  => ... (TBD, for now it is always default), at times
   {
     :score_key => custom_weighting
-  }
+  },
+:page / :per_page
+
+ < ======== Returns
+:records => [key, key, key, key, key, key],
+:facets  =>
+{
+  :instructions => { '45' => 33 items, '44' => 31 items },
+  :chicken      => 8000
+}
