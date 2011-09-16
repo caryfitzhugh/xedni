@@ -62,3 +62,27 @@ Query allows you to make a query on the database.
   :instructions => { '45' => 33 items, '44' => 31 items },
   :chicken      => 8000
 }
+
+Internal structure:
+
+simple => {
+  'chicken' => [ id, id, id, id, id ]
+}
+
+facets => {
+  'ingredients' => {'1' -> [ ... ], '2' -> [ .... ] }
+}
+
+records => {
+  'id' => { verbatim data from the update... , :keys, :score, :id }
+}
+
+Processing:
+Query ->
+  Create Redis call to find all record ids which match the OR and AND query
+
+  In Redis -- uniq, etc those records.
+  Calculate all the facet counts from these results.
+  Sort the records given their score values and the passed in query weightings.
+  Paginate
+  Return.
