@@ -86,3 +86,8 @@ Query ->
   Sort the records given their score values and the passed in query weightings.
   Paginate
   Return.
+
+
+HOW TO HANDLE USER-SCOPED RECORDS?
+-- if I want to search a recipe box -- I guess I can just push in a set of record IDs that are in their box (maybe max of a few thousand?)
+-- if I want to customize search for a user -- I can adjust weighting values... spicy factor + / -, etc
