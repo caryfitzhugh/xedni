@@ -47,6 +47,8 @@ Query allows you to make a query on the database.
   :and/or =>
     ['chicken', {:instructions=>[10,11,12]}]
 },
+* Will this allow us to combine with 'merge' easily?
+
 :facets => { :chicken, :instructions, :ingredients, :publisher, :heart_healthy }
 
 :score  => ... (TBD, for now it is always default), at times
@@ -91,3 +93,13 @@ Query ->
 HOW TO HANDLE USER-SCOPED RECORDS?
 -- if I want to search a recipe box -- I guess I can just push in a set of record IDs that are in their box (maybe max of a few thousand?)
 -- if I want to customize search for a user -- I can adjust weighting values... spicy factor + / -, etc
+
+
+Use Cases:
+
+Index all the records in the DB.
+Every time we print a recipe -- >
+MetaRecipe.update_xendi_rank('printed')
+
+And in some mapping somewhere, we define what that means.
+It shoots off a request to Xendi, to update the score for that record.
