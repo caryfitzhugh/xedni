@@ -1,5 +1,5 @@
 source :gemcutter
-gem "redis-scripted"
+gem "redis"
 gem "minitest"
 gem "active_support"
 gem "i18n"

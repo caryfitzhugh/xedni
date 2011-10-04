@@ -70,14 +70,25 @@ Internal structure:
 simple => {
   'chicken' => [ id, id, id, id, id ]
 }
+Redis:
+xedni::instance::chicken => Set()
 
 facets => {
   'ingredients' => {'1' -> [ ... ], '2' -> [ .... ] }
 }
+xedni:instance:ingredients:_keys => Set() of values (appended below)
+xedni:instance:ingredients:1
+xedni:instance:ingredients:2
+xedni:instance:ingredients:3
 
 records => {
   'id' => { verbatim data from the update... , :keys, :score, :id }
 }
+xedni:instance:records:#{id} => Hash()
+
+Scores: ?
+xedni:instance:scores:_keys => score types
+::
 
 Processing:
 Query ->
