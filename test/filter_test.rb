@@ -28,20 +28,24 @@ class TestFilter < MiniTest::Unit::TestCase
     assert_equal ['publisher'], filter.keys.sort
   end
   def test_set_math
+    r1 = Xedni::Record.new('1').save
+    r2 = Xedni::Record.new('3').save
+    r3 = Xedni::Record.new('2').save
+
     filter = Xedni::Filter.new('source')
     assert_equal [], filter.keys
 
-    filter.add('cary', '1')
-    filter.add('cary', '2')
-    filter.add('kayo', '1')
-    filter.add('kayo', '3')
-    filter.add('easton', '2')
-    filter.add('easton', '3')
+    filter.add('cary', r1)
+    filter.add('cary', r2)
+    filter.add('kayo', r1)
+    filter.add('kayo', r3)
+    filter.add('easton', r2)
+    filter.add('easton', r3)
 
     assert_equal ['cary', 'easton', 'kayo'], filter.keys.sort
 
-    assert_equal ['1'], filter.anded('cary','kayo').sort
-    assert_equal [], filter.anded('cary','kayo', 'easton').sort
-    assert_equal ['1','2','3'], filter.ored('cary','kayo').sort
+    assert_equal ['1'], filter.anded('cary','kayo').map(&:source_id).sort
+    assert_equal [], filter.anded('cary','kayo', 'easton').map(&:source_id).sort
+    assert_equal ['1','2','3'], filter.ored('cary','kayo').map(&:source_id).sort
   end
 end

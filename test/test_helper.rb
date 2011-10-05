@@ -12,3 +12,9 @@ rescue Errno::ECONNREFUSED
   puts "  bundle exec redis-server -p #{port}"
   exit
 end
+
+def load_records(values)
+  values.each_pair do |id, values|
+    Xedni::Record.new(id, values).save
+  end
+end
