@@ -14,7 +14,12 @@ Gem::Specification.new do |s|
   s.has_rdoc = false
   s.files = [
     'README',
-    'lib/**/*',
-    'test/**/*'
+    'lib/xedni/filter.rb',
+    'lib/xedni/record.rb'
+    'lib/xedni.rb',
+    'test/filter_test.rb',
+    'test/records_test.rb',
+    'test/test_helper.rb',
+    'test/xedni_test.rb'
   ]
 end
