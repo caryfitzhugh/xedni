@@ -31,5 +31,18 @@ class TestXedni < MiniTest::Unit::TestCase
 
     assert_equal ['1','3','4'], Xedni.search([:or, 'peanuts','apple',{'taste'=>['sweet']}]).map(&:source_id)
   end
-
+  def test_facet_counts
+    # Need to run Xedni.search([....], :facets=>[collection_keys_to_do_counts_on])
+    #
+    # Returns the counts correctly? AND btwn facets and ORs ?.... ?
+    # This is confusa bibble...
+    #
+    # Might just have a facets query which takes:
+    #
+    # keywords, :facets=> { }
+    # returns keywords && (facet1 [ a || b || c] && facet2 [ a || b || c])
+    #
+    # and do all the facet work like that and return
+    fail
+  end
 end
