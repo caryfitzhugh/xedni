@@ -15,7 +15,7 @@ Gem::Specification.new do |s|
   s.files = [
     'README',
     'lib/xedni/filter.rb',
-    'lib/xedni/record.rb'
+    'lib/xedni/record.rb',
     'lib/xedni.rb',
     'test/filter_test.rb',
     'test/records_test.rb',
