@@ -4,6 +4,13 @@ module Xedni
       @name = name
     end
 
+    def anded(*keys)
+      $redis.sinter *keys.collect {|k| filter_name(k) }
+    end
+    def ored(*keys)
+      $redis.sunion *keys.collect {|k| filter_name(k) }
+    end
+
     def add(filter_key, record_id)
       $redis.sadd keys_name, filter_key
       $redis.sadd filter_name(filter_key), record_id
