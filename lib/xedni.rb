@@ -1,11 +1,28 @@
 require 'active_support/all'
-require File.expand_path(File.join(File.dirname(__FILE__),'xedni','record'))
-require File.expand_path(File.join(File.dirname(__FILE__),'xedni','filter'))
+require File.expand_path(File.join(File.dirname(__FILE__),'xedni','scripts'))
+
 module Xedni
   def self.key_name(*args)
     args.unshift("xedni").join(':')
   end
-
+  def self.to_lua(hash_or_array)
+    if hash_or_array.is_a?(Hash)
+      values = []
+      hash_or_array.each_pair {|k,v|
+        values << "#{k} = #{self.to_lua(v)}"
+      }
+      "{" + values.join(", ") + "}"
+    elsif hash_or_array.is_a?(Array)
+      values = hash_or_array.collect {|v| self.to_lua(v) }
+      "{" + values.join(", ") + "}"
+    elsif hash_or_array.is_a?(String)
+      "\"#{hash_or_array}\""
+    elsif hash_or_array.is_a?(Symbol)
+      "\"#{hash_or_array.to_s}\""
+    else
+      hash_or_array
+    end
+  end
   # Syntax is a bunch of hashes
   # :keywords =>
   # :collection =>
@@ -19,42 +36,22 @@ module Xedni
     records, facets = find_records(query)
     score_records(records, scores)
   end
+  def self.create(id, collections, scores)
+    self.update(id, collections, scores)
+  end
+  def self.update(id, collections, scores)
+    collection_lua = self.to_lua(collections)
+    scores_lua     = self.to_lua(scores)
+    Xedni::Scripts.create(id, collection_lua, scores_lua)
+  end
+  def self.delete(id)
 
+  end
+  def self.read(id)
+
+  end
   def self.find_records(query)
-    # go over the entries.
-    # if it is a string - it's a keyword. Find those keywords
-    # if it is a hash - find those collections
-    # if it is :and, or :or at the front - then we need to union / intersect the results
-    facets = []
-    type = query.shift
-    records,facets = query.collect do |v|
-      case v
-      when Hash
-        # Could be a Set....
-        collection_ids = Array.new
-        v.each_pair do |filter_name, filter_keys|
-          collection_ids.concat Xedni::Filter.new(filter_name).anded(*filter_keys)
-        end
-        # Here facets should be the counts of each value, in a hash
-        [collection_ids.uniq, facets]
-      when Array # Or a sub array
-        # Here the facets are just passed back from find_records
-        find_records(v)
-      else
-        raise "What are you doig here? Only arrays and hashes (or :and / :or!)"
-      end
-    end
-
-    records = case type
-    when :and
-      intersects = records.shift
-      records.each do |rec|
-        intersects = intersects & rec
-      end
-      intersects.flatten
-    when :or
-      records.flatten.uniq
-    end
+    records = facets = {}
     [records, facets]
   end
 

@@ -1,4 +1,5 @@
 source :gemcutter
+gem "rake"
 gem "redis"
 gem "minitest"
 gem "active_support"
