@@ -6,18 +6,17 @@ module Xedni
     args.unshift("xedni").join(':')
   end
 
-  # Syntax is a bunch of arrays
-  #  TODO write this parser so out come the correct values!
-  #   eventually this exact code is shipped to LUA in REDIS, but for now we do it on our side.
+  # Syntax is a bunch of hashes
+  # :keywords =>
+  # :collection =>
+  # :collection =>
+  # :records => [    ]    // Limit it to only these records.
   #
-  # keywords (or) a,b,c AND collection speed=>'fast'
-  # [:and, [:or, 'a','b','c'], {:speed=>['fast']}]
+  # Facet returned is each one with 'if you clicked this what would you get?'
   #
-  # keywords (a, b, or C) && d {:speed=>['fast' OR 'medium']}
-  # Inside the [] of a collection, it is AND, to make it OR you must hop out into an :or-ray
-  # [:and, [:and, :d, [:or, a, b, c]], [:or, {:speed=>['fast']},{:speed=>['medium']}]]
+  # Scores need to include the # of times it was matched. And by default that is a 1.0 score.
   def self.search(query, scores=:default)
-    records = find_records(query)
+    records, facets = find_records(query)
     score_records(records, scores)
   end
 
@@ -26,8 +25,9 @@ module Xedni
     # if it is a string - it's a keyword. Find those keywords
     # if it is a hash - find those collections
     # if it is :and, or :or at the front - then we need to union / intersect the results
+    facets = []
     type = query.shift
-    records = query.collect do |v|
+    records,facets = query.collect do |v|
       case v
       when Hash
         # Could be a Set....
@@ -35,11 +35,13 @@ module Xedni
         v.each_pair do |filter_name, filter_keys|
           collection_ids.concat Xedni::Filter.new(filter_name).anded(*filter_keys)
         end
-        collection_ids.uniq
-      when Array
+        # Here facets should be the counts of each value, in a hash
+        [collection_ids.uniq, facets]
+      when Array # Or a sub array
+        # Here the facets are just passed back from find_records
         find_records(v)
       else
-        Xedni::Filter.new('keywords').ored(v)
+        raise "What are you doig here? Only arrays and hashes (or :and / :or!)"
       end
     end
 
@@ -53,7 +55,7 @@ module Xedni
     when :or
       records.flatten.uniq
     end
-    records
+    [records, facets]
   end
 
   def self.score_records(records, scores)

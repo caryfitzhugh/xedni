@@ -22,17 +22,19 @@ class TestXedni < MiniTest::Unit::TestCase
                           :scores=>{ :sweetness=>0.6, :saltiness=>0.5, :poularity=>0.1}
                         }
 
-    assert_equal ['3','4'], Xedni.search([:and, 'peanuts']).map(&:source_id)
-    assert_equal ['1','3','4'], Xedni.search([:or, 'peanuts', 'gala']).map(&:source_id)
-    assert_equal [], Xedni.search([:and, 'peanuts', 'gala']).map(&:source_id)
-    assert_equal ['1','3','4'], Xedni.search([:or, [:and,'peanuts'],[:and, 'gala']]).map(&:source_id)
-
-    assert_equal ['3','4'], Xedni.search([:or, 'peanuts',{'taste'=>['sweet']}]).map(&:source_id)
-
-    assert_equal ['1','3','4'], Xedni.search([:or, 'peanuts','apple',{'taste'=>['sweet']}]).map(&:source_id)
+    [
+      [['3','4'],     [:and, {:keywords=>['peanuts']}]],
+      [['1','3','4'], [:or, {:keywords=>['peanuts']},{:keywords=>['gala']}]],
+      [[],            [:and, {:keywords=>['peanuts', 'gala']}]],
+      [['1','3','4'], [:or, [:and,{:keywords=>['peanuts']}], [:and,{:keywords=>['gala'   ]}]]],
+      [['3','4'],     [:or, {:keywords=>['peanuts']},{:taste=>['sweet']}]],
+      [['1','3','4'], [:or, {:keywords=>['peanuts']},{:keywords=>['apple']},{'taste'=>['sweet']}]]
+    ].each do |should_be, query|
+      assert_equal should_be, Xedni.search(query).map(&:source_id)
+    end
   end
   def test_facet_counts
-    # Need to run Xedni.search([....], :facets=>[collection_keys_to_do_counts_on])
+    # Need to run Xedni.search([....])
     #
     # Returns the counts correctly? AND btwn facets and ORs ?.... ?
     # This is confusa bibble...
