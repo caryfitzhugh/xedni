@@ -60,14 +60,17 @@ class TestXedni < MiniTest::Unit::TestCase
     assert_equal [].sort, results['records']
 
   end
-  def test_sorting_by_hit_count
-    rec 'mr2', {:a => ['a']},               {:quality=>1.0}
-    rec 'mr1', {:a => ['a','b']},           {:quality=>1.0}
-    rec 'mr3', {:a => ['a','b','c']},       {:quality=>1.0}
-    rec "foo", {:a => ['a','b','c','d']},   {:quality=>1.0}
+  def test_sorting_by_weights
+    rec 'mr2', {:a => ['a']},               {}
+    rec 'mr1', {:a => ['a','b']},           {:q=>1.0, :r=>3}
+    rec 'mr3', {:a => ['a','b','c']},       {:q=>2.0, :r=>3}
+    rec "foo", {:a => ['a','b','c','d']},   {:q=>3.0, :r=>1}
 
-    results = Xedni.search([[:a,['a','b','c','d']]])
+    results = Xedni.search([[:a,['a','b','c','d']]], {:q=>1})
     assert_equal ['foo','mr3','mr1','mr2'], results['records']
+
+    results = Xedni.search([[:a,['a','b','c','d']]], {:q=>1, :r=>5})
+    assert_equal ['mr3','mr1','foo','mr2'], results['records']
   end
 
   def test_floating_00_100_weights

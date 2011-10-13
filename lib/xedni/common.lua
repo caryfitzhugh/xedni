@@ -70,9 +70,33 @@ xedni = {
     end,
 
     -- You want to sort these puppies by their score values - given in the weights array.
-    sort = function(record_ids, sort)
-      -- assert(redis.call('sort', record_ids, 'by',
-      return record_ids;
+    sort = function(record_ids, weights)
+      -- Explode the results now - into real values
+      records = assert(redis.call('smembers', record_ids))
+      if (weights == 'default') then
+        return records;
+      end
+      scores = {}
+      for index, record_id in pairs(records) do
+        local score = 0;
+        local hash_key = xedni.records.weights_key(record_id);
+
+        for field,weight in pairs(weights) do
+          weight_val = redis.call('hget', hash_key, field);
+          if (weight_val) then
+            score = score + (weight * weight_val);
+          end
+        end
+        scores[record_id] = score
+      end
+      function weighted_sort(x,y)
+        if scores[x] > scores[y] then
+          return true
+        end
+      end
+      table.sort(records, weighted_sort)
+
+      return records;
     end,
     paginate = function(record_ids, options)
       return record_ids;
