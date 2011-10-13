@@ -143,8 +143,15 @@ xedni = {
 
       -- Now set the data on the record.
       assert(redis.call("set", item_key,                    xedni.pack(record)));
+
       -- and put the scores into a hash for sorting purposes
-      assert(redis.call("hmset", xedni.records.scores_key(id),unpack(xedni.records.hset_args(record.scores))));
+      -- When storing in the system for queries, we multiply by 100,
+      -- so we can do some floating point
+      local scores = {};
+      for name, val in pairs(record.scores) do
+        scores[name] = val * 100.0;
+      end
+      assert(redis.call("hmset", xedni.records.scores_key(id),unpack(xedni.records.hset_args(scores))));
 
       return {item_key, record};
     end,
