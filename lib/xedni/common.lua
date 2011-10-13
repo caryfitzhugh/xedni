@@ -32,6 +32,7 @@ xedni = {
 
       return {records_key = records_key, facets = {}};
     end,
+
     -- This does the hugimongoso query across all the tables and SINTER and SUNIONS everything
     -- into a set of data which is stored in a redis key.
     --
@@ -40,7 +41,10 @@ xedni = {
     find_record_keys = function(query)
       local redis_uid = xedni.uid();
       local collection_result_uids = {}
-      for key, values in pairs(query) do
+      for index, collection in pairs(query) do
+        local key     = collection[1]
+        local values  = collection[2]
+
         local result_uid = xedni.uid();
         collection_result_uids[#collection_result_uids+1] = result_uid
         -- Store all results from this collection into this redis-store uid
@@ -65,7 +69,7 @@ xedni = {
       return redis_uid;
     end,
 
-    -- You want to sort these puppies by their score values - given in the scores array.
+    -- You want to sort these puppies by their score values - given in the weights array.
     sort = function(record_ids, sort)
       -- assert(redis.call('sort', record_ids, 'by',
       return record_ids;
@@ -125,13 +129,13 @@ xedni = {
     key = function(id)
       return xedni.collections.key('records', id);
     end,
-    scores_key = function(id)
-      return xedni.collections.key('record:scores', id);
+    weights_key = function(id)
+      return xedni.collections.key('record:weights', id);
     end,
     -- Add a record to xedni
-    add = function (id, collections, scores)
+    add = function (id, collections, weights)
       local item_key = xedni.records.key(id);
-      local record = {record = id, collections = collections, scores = scores}
+      local record = {record = id, collections = collections, weights = weights}
 
       -- Make the reverse index on this thing -- to all the collection keys
       for k,v in pairs(collections) do
@@ -144,14 +148,14 @@ xedni = {
       -- Now set the data on the record.
       assert(redis.call("set", item_key,                    xedni.pack(record)));
 
-      -- and put the scores into a hash for sorting purposes
+      -- and put the weights into a hash for sorting purposes
       -- When storing in the system for queries, we multiply by 100,
       -- so we can do some floating point
-      local scores = {};
-      for name, val in pairs(record.scores) do
-        scores[name] = val * 100.0;
+      local weights = {};
+      for name, val in pairs(record.weights) do
+        weights[name] = val * 100.0;
       end
-      assert(redis.call("hmset", xedni.records.scores_key(id),unpack(xedni.records.hset_args(scores))));
+      assert(redis.call("hmset", xedni.records.weights_key(id),unpack(xedni.records.hset_args(weights))));
 
       return {item_key, record};
     end,
@@ -205,8 +209,8 @@ xedni = {
       -- delete the item key
       redis.call('del', item_key);
 
-      -- delete the item's scores hash
-      redis.call('del', xedni.records.scores_key(id));
+      -- delete the item's weights hash
+      redis.call('del', xedni.records.weights_key(id));
       record.record = id;
       return record;
     end
