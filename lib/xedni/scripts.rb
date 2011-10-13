@@ -17,19 +17,21 @@ module Xedni
     end
 
     def self.method_missing(*args)
-      script =  args.shift.to_s
-      arguments = args
-      script = SCRIPTS[script.to_sym]
+      script_name =  args.shift.to_s
+      arguments = args.first
+      script = SCRIPTS[script_name.to_sym]
+      json = ActiveSupport::JSON.encode arguments
 
       if script.blank?
-        raise "INVALID Redis Script: #{script}"
+        raise "INVALID Redis Script: #{script_name}"
       end
 
       begin
-        $redis.evalsha(script[:sha],0, *arguments)
+        Xedni::Log.debug("Call: #{script_name} - #{json}")
+        ActiveSupport::JSON.decode($redis.evalsha(script[:sha], 0, json))
       rescue Exception => e
         if (e.to_s =~ /^NOSCRIPT/)
-          $redis.eval(script[:content], 0, *arguments)
+          ActiveSupport::JSON.decode($redis.eval(script[:content], 0, json))
         else
           raise e
         end
