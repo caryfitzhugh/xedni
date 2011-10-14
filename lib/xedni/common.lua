@@ -29,10 +29,54 @@ xedni = {
     query = function(query)
       collections = {};
       records_key = xedni.search.find_record_keys(query)
-
-      return {records_key = records_key, facets = {}};
+      facet_counts = xedni.search.facet_counts(query)
+      local t_count = redis.call('scard', records_key);
+      return {records_key = records_key, facets = facet_counts, total_count = t_count};
     end,
 
+    -- This iterates over each of the keys in each query collection
+    facet_counts = function(query)
+      local results = {};
+
+      local global_record_keys = xedni.search.find_record_keys(query);
+
+      for index, collection in pairs(query) do
+        local c_name     = collection[1]
+        local values     = collection[2]
+        local all_values = xedni.collections.valid_keys(c_name);
+        results[c_name] = {}
+
+
+        local these_record_keys = nil;
+
+        if values == true then
+          these_record_keys = global_record_keys;
+        else
+          local sub_query = deepcopy(query);
+
+          -- If there is only 1 query, kindof search it against everything
+          if (#sub_query == 1) then
+            sub_query[2] = sub_query[1]
+          end
+          table.remove(sub_query, index);
+
+          these_record_keys = xedni.search.find_record_keys(sub_query);
+        end
+
+        -- If none of our values are 'checked'
+
+        for index, c_val in pairs(all_values) do
+          -- We do an intersection and SCARD for each
+          local tmp_uid = xedni.uid();
+          local this_key = xedni.collections.key(c_name, c_val);
+
+          -- Find the intersection of values
+          results[c_name][c_val] = redis.call('sinterstore', tmp_uid, these_record_keys, this_key);
+          redis.call('rem', tmp_uid);
+        end
+      end
+      return results;
+    end,
     -- This does the hugimongoso query across all the tables and SINTER and SUNIONS everything
     -- into a set of data which is stored in a redis key.
     --
@@ -41,16 +85,20 @@ xedni = {
     find_record_keys = function(query)
       local redis_uid = xedni.uid();
       local collection_result_uids = {}
+
+      -- Load in *all* records now
+      assert(redis.call('sunionstore', redis_uid, xedni.records.map_key()));
+
       for index, collection in pairs(query) do
         local key     = collection[1]
         local values  = collection[2]
 
         local result_uid = xedni.uid();
-        collection_result_uids[#collection_result_uids+1] = result_uid
-        -- Store all results from this collection into this redis-store uid
         if (values == true) then
-          -- Nothing! Skip!
+          -- Nothing! Skip! This is only here for facet counting.
         else
+          -- Store all results from this collection into this redis-store uid
+          collection_result_uids[#collection_result_uids+1] = result_uid
           for i, value in pairs(values) do
             local collection_key = xedni.collections.key(key, value)
             redis.call('sunionstore', result_uid, result_uid, collection_key)
@@ -59,9 +107,9 @@ xedni = {
       end
 
       -- Now we have all the 'ORs'.  Let's AND them together
-      -- TODO Can't figure out how to pass a bunch of values to redis - so
-      -- we have to do it one at a time. Boo.
-      redis.call('sinterstore', redis_uid, unpack(collection_result_uids))
+      if (#collection_result_uids > 0 ) then
+        redis.call('sinterstore', redis_uid, unpack(collection_result_uids))
+      end
 
       -- One minute from now, we'll expire this key
       redis.call('expire', redis_uid, 360)
@@ -70,14 +118,15 @@ xedni = {
     end,
 
     -- You want to sort these puppies by their score values - given in the weights array.
-    sort = function(record_ids, weights)
+    sort = function(results, weights)
       -- Explode the results now - into real values
-      records = assert(redis.call('smembers', record_ids))
+      results.records = assert(redis.call('smembers', results.records_key))
+
       if (weights == 'default') then
-        return records;
+        return results;
       end
       scores = {}
-      for index, record_id in pairs(records) do
+      for index, record_id in pairs(results.records) do
         local score = 0;
         local hash_key = xedni.records.weights_key(record_id);
 
@@ -89,17 +138,38 @@ xedni = {
         end
         scores[record_id] = score
       end
+
       function weighted_sort(x,y)
         if scores[x] > scores[y] then
           return true
         end
       end
-      table.sort(records, weighted_sort)
 
-      return records;
+      table.sort(results.records, weighted_sort)
+
+      return results;
     end,
-    paginate = function(record_ids, options)
-      return record_ids;
+    paginate = function(results, options)
+      -- TODO this should be pulled in and be a REDIS LIST
+      -- and we do an LRANGE
+      if (nil == options.per_page) then
+        options.per_page = 1000
+      end
+      if (nil == options.page) then
+        options.page = 1
+      end
+      local start = (options.page - 1) * options.per_page + 1;
+      local count = options.per_page;
+
+      -- TODO -- do this slice in REDIS (See above)
+      local paginated_records = {};
+
+      for i = start, start+count-1 do
+        paginated_records[#paginated_records+1] = results.records[i];
+      end
+
+      results.records = paginated_records;
+      return results;
     end
   },
   collections = {
@@ -167,7 +237,7 @@ xedni = {
       end
 
       -- Now add to the _key set, so we can know all the records in our system.
-      assert(redis.call('sadd',xedni.records.map_key(), item_key));
+      assert(redis.call('sadd',xedni.records.map_key(), id));
 
       -- Now set the data on the record.
       assert(redis.call("set", item_key,                    xedni.pack(record)));
@@ -220,7 +290,7 @@ xedni = {
     -- Remove a record from Xedni
     delete = function(id)
       local item_key = xedni.records.key(id);
-      assert(redis.call('srem', xedni.records.map_key(), item_key))
+      assert(redis.call('srem', xedni.records.map_key(), id))
 
       local record = xedni.records.read(id);
       local collections = record.collections
@@ -734,6 +804,24 @@ function Set.intersection (a,b)
     res[k] = b[k]
   end
   return res
+end
+
+function deepcopy(object)
+    local lookup_table = {}
+    local function _copy(object)
+        if type(object) ~= "table" then
+            return object
+        elseif lookup_table[object] then
+            return lookup_table[object]
+        end
+        local new_table = {}
+        lookup_table[object] = new_table
+        for index, value in pairs(object) do
+            new_table[_copy(index)] = _copy(value)
+        end
+        return setmetatable(new_table, getmetatable(object))
+    end
+    return _copy(object)
 end
 
 

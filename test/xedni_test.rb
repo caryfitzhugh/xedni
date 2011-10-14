@@ -58,7 +58,37 @@ class TestXedni < MiniTest::Unit::TestCase
     # Now we try to search AND'ing a and f, no results
     results = Xedni.search([ [:a, ['a']], [:a, ['f']] ])
     assert_equal [].sort, results['records']
+  end
+  def test_faceting
+    rec 'mr1', {:a => ['a']           ,:b=>[1]}, {}
+    rec 'mr2', {:a => ['a','b']       ,:b=>[1]}, {}
+    rec 'mr3', {:a => ['a','b','c']   ,:b=>[2]}, {}
+    rec 'mr4', {:a => ['a']           ,:b=>[1]}, {}
+    rec 'mr5', {:a => ['a','b']       ,:b=>[2]}, {}
+    rec 'mr6', {:a => ['a','b','c']   ,:b=>[1]}, {}
 
+    facets = { 'a' => { 'a' => 6, 'b' => 4, 'c'=>2} }
+    assert_equal facets, Xedni.search([[:a,true]])['facets']
+
+    facets = { 'a' => { 'a' => 6, 'b' => 4, 'c'=>2} ,
+               'b' => { '1' => 4, '2' => 2}}
+    assert_equal facets, Xedni.search([[:a,true], [:b, true]])['facets']
+
+    # Now if you pressed 'a -> a'...
+    facets = { 'a' => { 'a' => 6, 'b' => 4, 'c'=>2} ,
+               'b' => { '1' => 4, '2' => 2}}
+    assert_equal facets, Xedni.search([[:a,['a']], [:b, true]])['facets']
+
+    # Now if you pressed 'a -> b'...
+    facets = { 'a' => { 'a' => 6, 'b' => 4, 'c'=>2} ,
+               'b' => { '1' => 2, '2' => 2}}
+    assert_equal facets, Xedni.search([[:a,['b']], [:b, true]])['facets']
+
+    # Now if you pressed 'a -> c'...
+    facets = { 'a' => { 'a' => 6, 'b' => 4, 'c'=>2} ,
+               'b' => { '1' => 1, '2' => 1}}
+    # Beacuse if you also selected 'b', you would get an additional 2 records shown.
+    assert_equal facets, Xedni.search([[:a,['c']], [:b, true]])['facets']
   end
   def test_sorting_by_weights
     rec 'mr2', {:a => ['a']},               {}
@@ -73,12 +103,6 @@ class TestXedni < MiniTest::Unit::TestCase
     assert_equal ['mr3','mr1','foo','mr2'], results['records']
   end
 
-  def test_floating_00_100_weights
-    # Scores come in as 0.00 - 1.00 floats, internally are scaled to 100, and
-    # then on the way out are converted back.
-    skip("Not Implemented")
-  end
-
   def test_ranges_on_collections_search
     results = Xedni.search([[:ingredients,[1, "-", 4]]])
     skip("Not Implemented")
@@ -90,8 +114,18 @@ class TestXedni < MiniTest::Unit::TestCase
   end
 
   def test_pagination
-    results = Xedni.search([], {}, {:page=>1, :per_page=>10})
-    skip("Not Implemented")
+    rec 'mr1', {:a => ['a','b']},           {:q=>1.0}
+    rec 'mr2', {:a => ['a']},               {:q=>1.5}
+    rec 'mr3', {:a => ['a','b','c']},       {:q=>2.0}
+
+    results = Xedni.search([[:a, true]], {:q=>1}, {:page=>1, :per_page=>1})
+    assert_equal ['mr3'], results['records']
+    results = Xedni.search([[:a, true]], {:q=>1}, {:page=>2, :per_page=>1})
+    assert_equal ['mr2'], results['records']
+    results = Xedni.search([[:a, true]], {:q=>1}, {:page=>3, :per_page=>1})
+    assert_equal ['mr1'], results['records']
+    results = Xedni.search([[:a, true]], {:q=>1}, {:page=>1, :per_page=>3})
+    assert_equal ['mr3','mr2','mr1'], results['records']
   end
 
   private
