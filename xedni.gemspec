@@ -14,11 +14,15 @@ Gem::Specification.new do |s|
   s.has_rdoc = false
   s.files = [
     'README',
-    'lib/xedni/filter.rb',
-    'lib/xedni/record.rb',
     'lib/xedni.rb',
-    'test/filter_test.rb',
-    'test/records_test.rb',
+    'lib/xedni/common.lua',
+    'lib/xedni/scripts.rb',
+    'lib/xedni/scripts/create.lua',
+    'lib/xedni/scripts/delete.lua',
+    'lib/xedni/scripts/dump.lua',
+    'lib/xedni/scripts/query.lua',
+    'lib/xedni/scripts/read.lua',
+    'lib/xedni/scripts/echo.lua',
     'test/test_helper.rb',
     'test/xedni_test.rb'
   ]
