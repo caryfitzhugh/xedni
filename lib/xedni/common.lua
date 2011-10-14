@@ -1,7 +1,7 @@
 -- These are constants and naming things...
 xedni = {
   uid = function()
-    return "x:tmp:" .. assert(redis.call("incr", "x:uid"));
+    return "x:tmp:" .. redis.call("incr", "x:uid");
   end,
   search = {
     -- Otherwise you can request a facet with an [...] - which looks for OR matches.
@@ -28,16 +28,64 @@ xedni = {
     --
     query = function(query)
       collections = {};
+      query = xedni.search.expand_dynamic_buckets(query)
       records_key = xedni.search.find_record_keys(query)
       facet_counts = xedni.search.facet_counts(query)
       local t_count = redis.call('scard', records_key);
       return {records_key = records_key, facets = facet_counts, total_count = t_count};
     end,
 
+    -- Expand the dynamic buckets
+    --
+    expand_dynamic_buckets = function(query)
+      local new_query = {};
+
+      for index, collection in pairs(query) do
+        local c_name     = collection[1]
+        local values     = collection[2]
+        local new_values = {}
+
+        local all_values = xedni.collections.valid_keys(c_name)
+        local all_are_ints = table.all_ints(all_values);
+
+        function sort_if_ints(x,y)
+          if (all_are_ints) then
+            return tonumber(x) < tonumber(y);
+          else
+            return x < y;
+          end
+        end
+
+        table.sort(all_values, sort_if_ints);
+
+        if (values == true) then
+          -- skip this.
+          new_values = true
+        elseif (#values > 0 and #all_values > 0) then
+          for index, v in pairs(values) do
+            local s, e;
+            local splitted = split(v, "<->");
+
+            if #splitted > 1 then
+              -- I need to find the first element in the all_values (or if it's '', pick index 1)
+              local start_i = table.find_index(all_values, splitted[1]) or 1;
+              local end_i   = table.find_index(all_values, splitted[2]) or #all_values-1;
+              for ind = start_i, end_i do
+                new_values[#new_values+1] = all_values[ind]
+              end
+            else
+              new_values[#new_values+1] = v
+            end
+          end
+        end
+        new_query[#new_query+1] = {c_name, new_values}
+      end
+      return new_query;
+    end,
+
     -- This iterates over each of the keys in each query collection
     facet_counts = function(query)
       local results = {};
-
       local global_record_keys = xedni.search.find_record_keys(query);
 
       for index, collection in pairs(query) do
@@ -45,7 +93,6 @@ xedni = {
         local values     = collection[2]
         local all_values = xedni.collections.valid_keys(c_name);
         results[c_name] = {}
-
 
         local these_record_keys = nil;
 
@@ -87,7 +134,7 @@ xedni = {
       local collection_result_uids = {}
 
       -- Load in *all* records now
-      assert(redis.call('sunionstore', redis_uid, xedni.records.map_key()));
+      redis.call('sunionstore', redis_uid, xedni.records.map_key());
 
       for index, collection in pairs(query) do
         local key     = collection[1]
@@ -120,8 +167,7 @@ xedni = {
     -- You want to sort these puppies by their score values - given in the weights array.
     sort = function(results, weights)
       -- Explode the results now - into real values
-      results.records = assert(redis.call('smembers', results.records_key))
-
+      results.records = redis.call('smembers', results.records_key)
       if (weights == 'default') then
         return results;
       end
@@ -183,25 +229,25 @@ xedni = {
       return col_prefix
     end,
     valid_keys = function(c_name)
-      return assert(redis.call('smembers', xedni.collections.map_key(c_name)));
+      return redis.call('smembers', xedni.collections.map_key(c_name));
     end,
     valid_key = function(c_name, key)
-      return assert(redis.call('ismember', xedni.collections.map_key(c_name), key));
+      return redis.call('ismember', xedni.collections.map_key(c_name), key);
     end,
     all_refs = function(c_name, key)
-      return assert(redis.call('smembers', xedni.collections.key(c_name, key)));
+      return redis.call('smembers', xedni.collections.key(c_name, key));
     end,
     ref_count = function(c_name, key)
-      return assert(redis.call('scard', xedni.collections.key(c_name, key)));
+      return redis.call('scard', xedni.collections.key(c_name, key));
     end,
     -- Add a collection membership reference for a record
     add_ref = function(c_name, record_id, collection_ids)
       for index,col_id in pairs(collection_ids) do
         -- Add to list of collection's keys
-        assert(redis.call('sadd', xedni.collections.map_key(c_name), col_id));
+        redis.call('sadd', xedni.collections.map_key(c_name), col_id);
         -- Add ref
         local key = xedni.collections.key(c_name, col_id)
-        assert(redis.call('sadd', key, record_id))
+        redis.call('sadd', key, record_id)
       end
     end,
 
@@ -209,19 +255,19 @@ xedni = {
     delete_ref = function(c_name, record_id, collection_ids)
       for index,col_id in pairs(collection_ids) do
         -- remove to list of collection's keys
-        assert(redis.call('srem', xedni.collections.map_key(c_name), col_id));
+        redis.call('srem', xedni.collections.map_key(c_name), col_id);
         -- remove ref
         local key = xedni.collections.key(c_name, col_id)
-        assert(redis.call('srem', key, record_id))
+        redis.call('srem', key, record_id)
       end
     end
   },
   records = {
     map_key = function()
-      return xedni.collections.map_key('records');
+      return xedni.collections.map_key('_records');
     end,
     key = function(id)
-      return xedni.collections.key('records', id);
+      return xedni.collections.key('_records', id);
     end,
     weights_key = function(id)
       return xedni.collections.key('record:weights', id);
@@ -235,12 +281,13 @@ xedni = {
       for k,v in pairs(collections) do
         xedni.collections.add_ref(k, id, v)
       end
+      xedni.collections.add_ref("records", id, {id})
 
       -- Now add to the _key set, so we can know all the records in our system.
-      assert(redis.call('sadd',xedni.records.map_key(), id));
+      redis.call('sadd',xedni.records.map_key(), id);
 
       -- Now set the data on the record.
-      assert(redis.call("set", item_key,                    xedni.pack(record)));
+      redis.call("set", item_key,                    xedni.pack(record));
 
       -- and put the weights into a hash for sorting purposes
       -- When storing in the system for queries, we multiply by 100,
@@ -249,7 +296,7 @@ xedni = {
       for name, val in pairs(record.weights) do
         weights[name] = val * 100.0;
       end
-      assert(redis.call("hmset", xedni.records.weights_key(id),unpack(xedni.records.hset_args(weights))));
+      redis.call("hmset", xedni.records.weights_key(id),unpack(xedni.records.hset_args(weights)));
 
       return {item_key, record};
     end,
@@ -290,7 +337,7 @@ xedni = {
     -- Remove a record from Xedni
     delete = function(id)
       local item_key = xedni.records.key(id);
-      assert(redis.call('srem', xedni.records.map_key(), id))
+      redis.call('srem', xedni.records.map_key(), id)
 
       local record = xedni.records.read(id);
       local collections = record.collections
@@ -299,6 +346,7 @@ xedni = {
       for k,v in pairs(collections) do
         xedni.collections.delete_ref(k, id, v)
       end
+      xedni.collections.delete_ref("records", id, {id})
 
       -- delete the item key
       redis.call('del', item_key);
@@ -824,5 +872,41 @@ function deepcopy(object)
     return _copy(object)
 end
 
+function split(str, inSplitPattern)
+  local outResults = {};
+  if not outResults then
+    outResults = { }
+  end
+  local theStart = 1
+  local theSplitStart, theSplitEnd = string.find( str, inSplitPattern, theStart )
+
+  while theSplitStart do
+    table.insert( outResults, string.sub( str, theStart, theSplitStart-#inSplitPattern ) )
+    theStart = theSplitEnd + 1
+    theSplitStart, theSplitEnd = string.find( str, inSplitPattern, theStart )
+  end
+  table.insert( outResults, string.sub( str, theStart ) )
+  return outResults
+end
+
+function table.find_index(list, val) -- find element v of l satisfying f(v)
+  for i, v in pairs(list) do
+    if val == v then
+      return i
+    end
+  end
+  return nil;
+end
+
+function table.all_ints(list)
+  for i, v in pairs(list)  do
+    if tonumber(v) ~= nil then
+      -- it's a number
+    else
+      return nil;
+    end
+  end
+  return true;
+end
 
 --#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-

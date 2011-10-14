@@ -16,9 +16,13 @@ module Xedni
   # Facet returned is each one with 'if you clicked this what would you get?'
   #
   # Scores need to include the # of times it was matched. And by default that is a 1.0 score.
+  def self.query(query, weights=:default, options={:page=>1, :per_page=>1000})
+    self.search(query, weights, options)
+  end
   def self.search(query, weights=:default, options={:page=>1, :per_page=>1000})
     response =  Xedni::Scripts.query(:query=>query, :weights=>weights, :options=>options)
   end
+
   def self.create(id, collections, weights)
     self.update(id, collections, weights)
   end

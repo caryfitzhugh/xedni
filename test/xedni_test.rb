@@ -104,13 +104,32 @@ class TestXedni < MiniTest::Unit::TestCase
   end
 
   def test_ranges_on_collections_search
-    results = Xedni.search([[:ingredients,[1, "-", 4]]])
-    skip("Not Implemented")
+    ('a'..'z').each do |c|
+      rec c, {:a => [ c ] }, {:q => 1}
+    end
+
+    (0..100).each do |c|
+      rec c, {:b => [ c ] }, {:q => 1}
+    end
+
+    assert_equal 4, Xedni.search([[:a,['a<->d']]])['total_count']
+    assert_equal 26, Xedni.search([[:a,['a<->z']]])['total_count']
+    assert_equal 10, Xedni.search([[:a,['a<->e','m<->q']]])['total_count']
+
+    assert_equal 10,  Xedni.search([[:b,['1<->10']]])['total_count']
+    assert_equal 22, Xedni.search([[:b,['4<->25']]])['total_count']
+    assert_equal 38, Xedni.search([[:b,['9<->35','50<->60']]])['total_count']
   end
 
   def test_limiting_to_records
-    results = Xedni.search([[:records,[]]])
-    skip("Not Implemented")
+    rec 'mr1', {:a => ['a','b']},           {:q=>1.0}
+    rec 'mr2', {:a => ['a']},               {:q=>1.5}
+    rec 'mr3', {:a => ['a','b','c']},       {:q=>2.0}
+
+    assert_equal ['mr1'], Xedni.search([[:records,['mr1'],[:a,['a']]]])['records']
+    assert_equal ['mr2'], Xedni.search([[:records,['mr2'],[:a,['a']]]])['records']
+    assert_equal ['mr1','mr3'], Xedni.search([[:records,['mr1','mr3'],[:a,['a']]]])['records']
+
   end
 
   def test_pagination
