@@ -9,9 +9,6 @@ module Xedni
       end
     end
   end
-  def self.key_name(*args)
-    args.unshift("xedni").join(':')
-  end
   # Syntax is a bunch of hashes
   # :collections => {   }
   # :records => [    ]    // Limit it to only these records.
@@ -34,8 +31,7 @@ module Xedni
   def self.delete(id)
     Xedni::Scripts.delete(:record=>id)
   end
-  def self.find_records(query)
-    records = facets = {}
-    [records, facets]
+  def self.reset
+    $redis.flushall
   end
 end
