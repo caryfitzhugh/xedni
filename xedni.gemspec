@@ -17,6 +17,8 @@ Gem::Specification.new do |s|
     'lib/xedni.rb',
     'lib/xedni/common.lua',
     'lib/xedni/scripts.rb',
+    'lib/xedni/connection.rb',
+    'lib/xedni/log.rb',
     'lib/xedni/scripts/create.lua',
     'lib/xedni/scripts/delete.lua',
     'lib/xedni/scripts/dump.lua',
@@ -24,6 +26,7 @@ Gem::Specification.new do |s|
     'lib/xedni/scripts/read.lua',
     'lib/xedni/scripts/echo.lua',
     'test/test_helper.rb',
+    'test/redis_daemon_helper.rb',
     'test/xedni_test.rb'
   ]
 end

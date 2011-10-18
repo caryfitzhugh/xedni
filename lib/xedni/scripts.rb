@@ -26,15 +26,13 @@ module Xedni
         raise "INVALID Redis Script: #{script_name}"
       end
 
+      redis = Xedni::Connection.connection
+
       begin
         Xedni::Log.debug("Call: #{script_name} - #{json}")
-        ActiveSupport::JSON.decode($redis.evalsha(script[:sha], 0, json))
-      rescue Exception => e
-        if (e.to_s =~ /^NOSCRIPT/)
-          ActiveSupport::JSON.decode($redis.eval(script[:content], 0, json))
-        else
-          raise e
-        end
+        ActiveSupport::JSON.decode(redis.evalsha(script[:sha], 0, json))
+      rescue
+        ActiveSupport::JSON.decode(redis.eval(script[:content], 0, json))
       end
     end
   end

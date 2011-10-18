@@ -1,20 +1,22 @@
 require 'minitest/autorun'
 require File.expand_path(File.join(File.dirname(__FILE__), 'test_helper'))
-require File.expand_path(File.join(File.dirname(__FILE__),'..','lib','xedni'))
-require File.expand_path(File.join(File.dirname(__FILE__),'..','redis_daemon'))
 
-ENV["XEDNI_LOGGING"] = 'true'
-ENV.delete("XEDNI_LOGGING")
+
+##  Start redis server here (port 6380)
+pid = Process.spawn "cd #{File.dirname(__FILE__)} && bash #{File.join(File.expand_path(File.dirname(__FILE__)), 'start-redis.sh')}",
+                    :err=>:out, STDOUT=>".redis.log", STDIN=>'/dev/null'
+puts "Redis PID: #{pid}"
+
+## Kill it at the end
+MiniTest::Unit.after_tests { Process.kill("TERM", pid) }
+
 
 class TestXedni < MiniTest::Unit::TestCase
   def setup
-    #RedisDaemon.daemonize("restart")
-    $redis = Redis.new(:port => 6380)
-    $redis.flushall
-  end
-  def teardown
-    $redis = nil
-    #RedisDaemon.daemonize("stop")
+    # This port is configured in ./start-redis.sh (a script only for testing.)
+    Xedni::Connection.connect(:port => 6380)
+    Xedni::Connection.connection.flushall
+    super
   end
 
   def test_crud_records

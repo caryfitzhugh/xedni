@@ -1,14 +1,12 @@
 require 'active_support/all'
 require File.expand_path(File.join(File.dirname(__FILE__),'xedni','scripts'))
+require File.expand_path(File.join(File.dirname(__FILE__),'xedni','log'))
+require File.expand_path(File.join(File.dirname(__FILE__),'xedni','connection'))
 
 module Xedni
-  module Log
-    def self.debug(*args)
-      if ENV['XEDNI_LOGGING']
-        Logger.new(STDOUT).debug("Xedni") { args.join("\n") }
-      end
-    end
+  class Exception < Exception
   end
+
   # Syntax is a bunch of hashes
   # :collections => {   }
   # :records => [    ]    // Limit it to only these records.
@@ -36,6 +34,6 @@ module Xedni
     Xedni::Scripts.delete(:record=>id)
   end
   def self.reset
-    $redis.flushall
+    Xedni::Connection.connection.flushall
   end
 end
