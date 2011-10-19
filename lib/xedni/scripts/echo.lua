@@ -1,1 +1,0 @@
-return ARGV[1]

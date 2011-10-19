@@ -1,4 +1,5 @@
 DONE -- * Replace $redis with Xedni.connection
+DONE -- * Add MIT license headers to all files.
 
 * update / read  can handle an array for record _id
 * update weights is a subset of above
