@@ -1,27 +1,32 @@
 DONE -- * Replace $redis with Xedni.connection
 DONE -- * Add MIT license headers to all files.
 
+Xedni WRITES can be specified as blocking or not in xedni-server
+
+* Don't serialize records internally
+  ** No need to have records key - since we are adding it to records collection.
+     Just redefine to be a helper -- calling collections.map_key("records");
+
+  The weights are easy, just a hash -- need to process how to read them in quickly.
+  The collections are harder, we want to read them and remove ourselves from all collections.
+    foo => [1,2,3]
+    bar => [4,5,6]
+  How to store this in Redis?
+    collection:foo => [rec1,....]
+    collection:bar => [rec2,....]
+  But to iterate is too crazy, could have thousands of keys.
+  Need to store them... json? <sigh> guess so. Reading is a pain then. drat.
+
 * update / read  can handle an array for record _id
 * update weights is a subset of above
 
 * Update weights on a record, or bulk update weights
+  (modifier is +-*/ by float)
 
-* Don't serialize records internally
-  Put record data into a hash (collections) ,  (scores) and read them in && return.
-
-
-
-* Data coming in should be LUA-OBJ-NOTATION, coming out is JSON.
-
-* Split files up a bit.
-
-* Rails plugin and mixin /etc
-  test mode goes to the Xedni directly, otherwise hit's Xedni server (URL in configuration file)
 
 * Tests and benchmarks
 
 * Optional faceting style -- Exclusive facets? or more like tags?
-
 * Keep a list of all collections in the system - so there is no need for [key, true]
 * Return page, per_page, total_count.  Calculate total_pages, next_page, prev_page in the Xedni code on the ruby-side.
 
@@ -29,6 +34,8 @@ REDIS:
   do pull-request on branch -- to implement the new syntax.
 
 RAILS:
+* Rails plugin and mixin /etc
+  test mode goes to the Xedni directly, otherwise hit's Xedni server (URL in configuration file)
 * Pass in connection data on startup  (in plugin this comes from config/xedni.yml -- and is read on init)
   Needs to have :include field, so you can include other records when fetching the records from xedni.search
 
@@ -42,3 +49,15 @@ XedniServer:
   Can push metrics up to somewhere?
 
   Real REST-fulness.  parse POST params like they should be.  Parse GET Url parameters as well.
+
+
+POTENTIAL SPEEDUPS:
+  Data coming in should be LUA-OBJ-NOTATION, coming out is JSON.
+
+Load Balancer
+     |
+     V
+[xedni-server, xedni-server, xedni-server]
+     |
+     V
+[redis primary, redis secondary]

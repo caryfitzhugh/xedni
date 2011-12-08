@@ -1,7 +1,7 @@
 A gem and backend solution for searching moderate amounts of data
 with faceting.
 
-* consistent
+* consistent (on writes as requested)
 * simple for testing & production
 
 Call Stack:
@@ -114,3 +114,12 @@ MetaRecipe.update_xendi_rank('printed')
 
 And in some mapping somewhere, we define what that means.
 It shoots off a request to Xendi, to update the score for that record.
+
+
+Load Balancer
+     |
+     V
+[xedni-server, xedni-server, xedni-server]
+     |
+     V
+[redis primary, redis secondary]
