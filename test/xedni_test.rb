@@ -21,24 +21,26 @@
 require 'minitest/autorun'
 require File.expand_path(File.join(File.dirname(__FILE__), 'test_helper'))
 
-
-##  Start redis server here (port 6380)
-pid = Process.spawn "cd #{File.dirname(__FILE__)} && bash #{File.join(File.expand_path(File.dirname(__FILE__)), 'start-redis.sh')}",
-                    :err=>:out, STDOUT=>".redis.log", STDIN=>'/dev/null'
-puts "Redis PID: #{pid}"
-
-## Kill it at the end
-MiniTest::Unit.after_tests { Process.kill("TERM", pid) }
-
-
 class TestXedni < MiniTest::Unit::TestCase
   def setup
     # This port is configured in ./start-redis.sh (a script only for testing.)
     Xedni::Connection.connect(:port => 6380)
-    Xedni::Connection.connection.flushall
+    #Xedni::Connection.connection.flushall
     super
   end
 
+  def test_benchmark
+    #Xedni.load(100000)
+    #puts "skipping loading. has 100001 records already"
+    results = (0..10).collect do |run|
+      Xedni.benchmark
+    end
+    stot = results.inject(0) {|cnt, v| cnt += v.first; cnt }
+    ttot = results.inject(0) {|cnt, v| cnt += v.last; cnt }
+    tavg = ttot/results.size
+    puts "result: #{stot * 1.0/ttot} q/sec"
+    # total_time: #{ttot}, avg query time: #{tavg}, avg # scored: #{savg}"
+  end
   def test_crud_records
     rec_id = Xedni.create("rec_1", {:foo=>['foo1','foo2',:foo3]}, {:val=>100, :fear=>0})
     assert_equal "rec_1", rec_id

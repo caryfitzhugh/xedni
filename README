@@ -4,6 +4,38 @@ with faceting.
 * consistent (on writes as requested)
 * simple for testing & production
 
+
+
+Everything is a collection:
+  :text=>  ['chicken', 'peas', 'pepper']
+  :spicy=> 4
+
+So your query comes like this:
+filter:
+  text:   ['chicken']
+  spicy:  ['4',  '-']
+score:
+  :text => 1,
+  :spicy => -1.1
+
+Which means they want text matching occurrance to be a factor, and less spicy to be important
+
+Implement:
+ temp_redis_key_1 = [ all the recipe record ids which were in any of the filters]
+ temp_redis_key_2 = [ all the recipe weights]
+ result_key       = sort by key_2
+
+Getting the weight for a redis key involves getting the key values,
+function gets the values from the incoming filter
+score = recipe.collection_weight(recipe.text, ['chicken']) * 1 +
+        recipe.collection_weight(recipe.spicy, ['4','5','6'....'100']) * 4
+
+recipe.text would initially return # of matched values
+recipe.spicy wold return the spicy valu (since it's not an array, but an int) of 4
+
+then sort by those values
+
+
 Call Stack:
 
 Model

@@ -26,6 +26,57 @@ require File.expand_path(File.join(File.dirname(__FILE__),'xedni','connection'))
 module Xedni
   class Exception < Exception
   end
+  def self.load(count)
+    tstart = Time.now
+    # Create all the records
+    records = (0..count).map do |i|
+      { :id => i,
+        :attrs=>
+          {:a => rand(20) / 1,
+           :b => rand(20) / 1,
+           :c => rand(20) / 1,
+           :d => rand(20) / 1,
+           :e => rand(20) / 1,
+           :f => rand(20) / 1,
+           :g => rand(20) / 1}
+      }
+    end
+
+    # Populate
+    puts 'Populating redis'
+    records.each do |record|
+      # Add record to records
+      Xedni::Connection.connection.sadd 'collections:ids', record[:id]
+      # Add to all the collections
+      record[:attrs].each_pair do |i,v|
+        Xedni::Connection.connection.sadd "collections:attr_#{i}:keys", v
+        Xedni::Connection.connection.sadd "collections:attr_#{i}:#{v}", record[:id]
+      end
+      Xedni::Connection.connection.sadd  "record:#{record[:id]}:keys", 'a'
+      Xedni::Connection.connection.sadd  "record:#{record[:id]}:keys", 'b'
+      Xedni::Connection.connection.sadd  "record:#{record[:id]}:keys", 'c'
+      Xedni::Connection.connection.sadd  "record:#{record[:id]}:keys", 'd'
+      Xedni::Connection.connection.sadd  "record:#{record[:id]}:keys", 'e'
+      Xedni::Connection.connection.sadd  "record:#{record[:id]}:keys", 'f'
+
+      Xedni::Connection.connection.hmset "record:#{record[:id]}",
+                   "a", record[:attrs][:a],
+                   "b", record[:attrs][:b],
+                   "c", record[:attrs][:c],
+                   "d", record[:attrs][:d],
+                   "e", record[:attrs][:e],
+                   "f", record[:attrs][:f]
+
+    end
+    puts "\n#{records.size} Records in redis in #{Time.now - tstart}"
+  end
+  def self.benchmark
+    # Do the query
+    tstart= Time.now
+    res = Xedni::Scripts.benchmark("a"=>rand(20)/1, "b"=>rand(20)/1, "c" => rand(20)/1, "d" => rand(20)/1, "e"=>rand(20)/1, "f"=>rand(20)/1)
+    tend = Time.now
+    [res, tend-tstart]
+  end
 
   # Syntax is a bunch of hashes
   # :collections => {   }
